@@ -12,7 +12,7 @@ class FirstController extends AbstractController
     #[Route('/order/{maVar}', name: 'test.order.route')]
     public function testOrderRoute($maVar){
         return new Response("
-        <html><body><h1>$maVar</h1></body></html>
+        <html><body><h2>$maVar</h2></body></html>
         ");
     }
 
