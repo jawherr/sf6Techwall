@@ -26,22 +26,6 @@ class Personne
     #[ORM\Column(length: 50, nullable: true)]
     private ?string $job = null;
 
-    /**
-     * @param int|null $id
-     * @param string|null $firstname
-     * @param string|null $name
-     * @param int|null $age
-     * @param string|null $job
-     */
-    public function __construct(?int $id, ?string $firstname, ?string $name, ?int $age, ?string $job)
-    {
-        $this->id = $id;
-        $this->firstname = $firstname;
-        $this->name = $name;
-        $this->age = $age;
-        $this->job = $job;
-    }
-
     public function getId(): ?int
     {
         return $this->id;
