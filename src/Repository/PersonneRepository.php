@@ -8,8 +8,6 @@ use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<Personne>
- *
  * @method Personne|null find($id, $lockMode = null, $lockVersion = null)
  * @method Personne|null findOneBy(array $criteria, array $orderBy = null)
  * @method Personne[]    findAll()
@@ -28,7 +26,7 @@ class PersonneRepository extends ServiceEntityRepository
         return   $qb->getQuery()->getResult();
     }
 
-    public function statsPersonneByAgeIterval($ageMin, $ageMax)
+    public function statsPersonnesByAgeInterval($ageMin, $ageMax)
     {
         $qb = $this->createQueryBuilder('p')
             ->select('avg(p.age) as ageMoyen, count(p.id) as nombrePersonne');

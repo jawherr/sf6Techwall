@@ -3,11 +3,16 @@
 namespace App\Controller;
 
 use App\Entity\Personne;
+use App\Form\PersonneType;
+use App\Service\Helpers;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\String\Slugger\SluggerInterface;
 
 
 #[Route('personne')]
@@ -28,7 +33,7 @@ class PersonneController extends AbstractController
     #[Route('/stats/age/{ageMin}/{ageMax}', name:'personne.list.age')]
     public function statsPersonnesByAge(ManagerRegistry $doctrine, $ageMin, $ageMax):Response {
         $repository = $doctrine->getRepository(Personne::class);
-        $stats = $repository->statsPersonneByAgeIterval($ageMin, $ageMax);
+        $stats = $repository->statsPersonnesByAgeInterval($ageMin, $ageMax);
         return $this->render('personne/stats.html.twig', [
             'stats' => $stats[0],
             'ageMin'=>$ageMin,
@@ -37,6 +42,8 @@ class PersonneController extends AbstractController
     }
     #[Route('/alls/{page?1}/{nbre?12}', name:'personne.list.alls')]
     public function indexAlls(ManagerRegistry $doctrine, $page, $nbre):Response {
+        $helpers = new Helpers();
+        dd($helpers->sayCc());
         $repository = $doctrine->getRepository(Personne::class);
         $nbPersonne = $repository->count([]);
         // 24
@@ -61,22 +68,66 @@ class PersonneController extends AbstractController
         }
         return $this->render('personne/detail.html.twig', ['personne' => $personne]);
     }
-    #[Route('/add', name: 'personne.add')]
-    public function addPersonne(ManagerRegistry $doctrine): Response
+    #[Route('/edit/{id?0}', name: 'personne.edit')]
+    public function addPersonne($id,ManagerRegistry $doctrine, Request $request, SluggerInterface $slugger): Response
     {
+        $repository = $doctrine->getRepository(Personne::class);
+        $personne = $repository->find($id);
+        $new=false;
         //$this->getDoctrine() : Version Sf <= 5
-        $entityManager = $doctrine->getManager();
-        $personne = new Personne();
-        $personne->setFirstname('Jawher');
-        $personne->setName('Kallel');
-        $personne->setAge('27');
-        //Ajouter l'operation d'insertion de la personne dans ma transaction
-        $entityManager->persist($personne);
-        //Exécute la transaction
-        $entityManager->flush();
-        return $this->render('personne/detail.html.twig', [
-            'personne' => $personne,
-        ]);
+        if(!$personne){
+            $new = true;
+            $personne = new Personne();
+        }
+        // $personne est l'image de notre formulaire
+        $form = $this->createForm(PersonneType::class, $personne);
+        $form->remove('createdAt');
+        $form->remove('updatedAt');
+        // Mon formulaire va aller traiter le requete
+        $form->handleRequest($request);
+        //Est ce que le formulaire a été soumis
+        if($form->isSubmitted() && $form->isValid()){
+            //Si oui,
+            // on va ajouter l'objet dans la base de données
+            $photo = $form->get('photo')->getData();
+            // this condition is needed because the 'brochure' field is not required
+            // so the PDF file must be processed only when a file is uploaded
+            if ($photo) {
+                $originalFilename = pathinfo($photo->getClientOriginalName(), PATHINFO_FILENAME);
+                // this is needed to safely include the file name as part of the URL
+                $safeFilename = $slugger->slug($originalFilename);
+                $newFilename = $safeFilename . '-' . uniqid() . '.' . $photo->guessExtension();
+                // Move the file to the directory where brochures are stored
+                try {
+                    $photo->move(
+                        $this->getParameter('personne_directory'),
+                        $newFilename
+                    );
+                } catch (FileException $e) {
+                    // ... handle exception if something happens during file upload
+                }
+                $personne->setImage($newFilename);
+            }
+
+            $manager = $doctrine->getManager();
+            $manager->persist($personne);
+            $manager->flush();
+            //Afficher un message de succés
+            if($new){
+                $message = "a été ajouté avec succés";
+            } else {
+                $message = "a été mis a jour avec succés";
+            }
+            $this->addFlash('success',$personne->getName().$message);
+            // Rederiger verts la liste des personne
+            return $this->redirectToRoute('personne.list');
+        } else {
+            //Sinon
+            //On affiche notre formulaire
+            return $this->render('personne/add-personne.html.twig', [
+                'form' => $form->createView()
+            ]);
+        }
     }
 
     #[Route('/delete/{id}', name: 'personne.delete')]

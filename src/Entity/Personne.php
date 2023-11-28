@@ -8,8 +8,9 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
-#[ORM\Entity(repositoryClass: PersonneRepository::class)]
+#[ORM\Entity(repositoryClass:PersonneRepository::class)]
 #[ORM\HasLifecycleCallbacks]
 class Personne
 {
@@ -20,6 +21,8 @@ class Personne
     private ?int $id = null;
 
     #[ORM\Column(length: 50)]
+    #[Assert\NotBlank(message:"Veuillez renseigner ce champ")]
+    #[Assert\Length(min:4, minMessage: "Veullez avoir au moins 4 caractéres")]
     private ?string $firstname = null;
 
     #[ORM\Column(length: 50)]
@@ -37,12 +40,13 @@ class Personne
     #[ORM\ManyToOne(inversedBy: 'personnes')]
     private ?Job $job = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $image = null;
 
     public function __construct()
     {
         $this->hobbies = new ArrayCollection();
     }
-
 
     public function getId(): ?int
     {
@@ -129,6 +133,18 @@ class Personne
     public function setJob(?Job $job): static
     {
         $this->job = $job;
+
+        return $this;
+    }
+
+    public function getImage(): ?string
+    {
+        return $this->image;
+    }
+
+    public function setImage(?string $image): static
+    {
+        $this->image = $image;
 
         return $this;
     }
